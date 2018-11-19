@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Node Kinect2 Client</title>
+	<link rel="stylesheet" href="">
+</head>
+<body>
+	<canvas id="canvas" width="640" height="360"></canvas>
+	<canvas id="canvas2" width="640" height="360"></canvas>
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+		var socket = io.connect('/');
+		var canvas = document.getElementById('canvas');
+		var canvas2 = document.getElementById('canvas2');
+		var ctx = canvas.getContext('2d');
+		var ctx2 = canvas2.getContext('2d');
+
+		var colorProcessing = false;
+		var colorWorkerThread = new Worker("js/colorWorker.js");
+		
+		colorWorkerThread.addEventListener("message", function (event) {
+			if(event.data.message === 'imageReady') {
+                ctx.putImageData(event.data.imageData, 0, 0);
+                colorProcessing = false;
+			}
+		});
+		colorWorkerThread.postMessage({
+			"message": "setImageData",
+			"imageData": ctx.createImageData(canvas.width, canvas.height)
+		});
+		socket.on('colorFrame', function(imageBuffer){
+			if(!colorProcessing) {
+				colorProcessing = true;
+				colorWorkerThread.postMessage({ "message": "processImageData", "imageBuffer": imageBuffer });
+			}
+		});
+		/*
+		var imageProcessing = false;
+		var imageWorkerThread = new Worker("js/GrayscaleImageWorker.js");
+		
+		imageWorkerThread.addEventListener("message", function (event) {
+			if(event.data.message === 'imageReady') {
+                ctx.putImageData(event.data.imageData, 0, 0);
+                imageProcessing = false;
+			}
+		});
+		imageWorkerThread.postMessage({
+			"message": "setImageData",
+			"imageData": ctx.createImageData(canvas.width, canvas.height)
+		});*/
+		
+
+		var colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff'];
+		// handstate circle size
+		var HANDSIZE = 20;
+		// closed hand state color
+		var HANDCLOSEDCOLOR = "red";
+		// open hand state color
+		var HANDOPENCOLOR = "green";
+		// lasso hand state color
+		var HANDLASSOCOLOR = "blue";
+		function updateHandState(handState, jointPoint) {
+			switch (handState) {
+				case 3:
+					drawHand(jointPoint, HANDCLOSEDCOLOR);
+				break;
+				case 2:
+					drawHand(jointPoint, HANDOPENCOLOR);
+				break;
+				case 4:
+					drawHand(jointPoint, HANDLASSOCOLOR);
+				break;
+			}
+		}
+
+		function detectTpos(handLeftJointPoint, handRightJointPoint, shoulderLeftJointPoint, shoulderRightJointPoint, elbowLeftJointPoint, elbowRightJointPoint) {
+			var handLeftX = handLeftJointPoint.depthX;
+			var handLeftY = handLeftJointPoint.depthY;
+
+			var handRightY = handRightJointPoint.depthY;
+			var handRightX = handRightJointPoint.depthX;
+
+			var shoulderRightY = shoulderRightJointPoint.depthY;
+			var shoulderRightX = shoulderRightJointPoint.depthX;
+
+			var shoulderLeftY = shoulderLeftJointPoint.depthY;
+			var shoulderLeftX = shoulderLeftJointPoint.depthX;
+
+			var elbowLeftX = elbowLeftJointPoint.depthX;
+			var elbowLeftY = elbowLeftJointPoint.depthY;
+
+			var elbowRightY = elbowRightJointPoint.depthY;
+			var elbowRightX = elbowRightJointPoint.depthX;
+
+			var relativeHandLeftX = handLeftX - shoulderLeftX;
+			var relativeHandLeftY = handLeftY - shoulderLeftY;
+
+			var relativeHandRightY = handRightY - shoulderRightY;
+			var relativeHandRightX = handRightX - shoulderRightX;
+
+			var relativeElbowLeftX = elbowLeftX - shoulderLeftX;
+			var relativeElbowLeftY = elbowLeftY - shoulderLeftY;
+
+			var relativeElbowRightY = elbowRightY - shoulderRightY;
+			var relativeElbowRightX = elbowRightX - shoulderRightX;
+
+			var relativeShoulders = shoulderLeftY - shoulderRightY;
+			//console.log(relativeHandRightY);
+			if (Math.abs(relativeShoulders) < 0.1) {
+				if ((Math.abs(relativeElbowRightY) < 0.1) && (Math.abs(relativeElbowLeftY) < 0.1) && (Math.abs(relativeHandRightY) < 0.1) && (Math.abs(relativeHandLeftY) < 0.1) && (Math.abs(relativeElbowRightX) > 0.1) && (Math.abs(relativeElbowLeftX) > 0.1) && (Math.abs(relativeHandRightX) > 0.1) && (Math.abs(relativeHandLeftX) > 0.1)) {
+					//console.log("T pos detected !!");
+					// draw semi transparent hand cicles
+					ctx.fillStyle = '#00ff00';
+					ctx.fillRect(shoulderRightJointPoint.depthX * 640, shoulderRightJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(shoulderLeftJointPoint.depthX * 640, shoulderLeftJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(elbowRightJointPoint.depthX * 640, elbowRightJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(elbowLeftJointPoint.depthX * 640, elbowLeftJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(handLeftJointPoint.depthX * 640, handLeftJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(handRightJointPoint.depthX * 640, handRightJointPoint.depthY * 360, 10, 10);
+				}
+			}
+		}
+
+		function detectHRpos(handLeftJointPoint, handRightJointPoint, shoulderLeftJointPoint, shoulderRightJointPoint, elbowLeftJointPoint, elbowRightJointPoint, spineBaseJointPoint) {
+			var handLeftX = handLeftJointPoint.depthX;
+			var handLeftY = handLeftJointPoint.depthY;
+
+			var handRightY = handRightJointPoint.depthY;
+			var handRightX = handRightJointPoint.depthX;
+
+			var shoulderRightY = shoulderRightJointPoint.depthY;
+			var shoulderRightX = shoulderRightJointPoint.depthX;
+
+			var shoulderLeftY = shoulderLeftJointPoint.depthY;
+			var shoulderLeftX = shoulderLeftJointPoint.depthX;
+
+			var elbowLeftX = elbowLeftJointPoint.depthX;
+			var elbowLeftY = elbowLeftJointPoint.depthY;
+
+			var elbowRightY = elbowRightJointPoint.depthY;
+			var elbowRightX = elbowRightJointPoint.depthX;
+
+			var spineBaseX = spineBaseJointPoint.depthX;
+			var spineBaseY = spineBaseJointPoint.depthY;
+
+			var relativeHandLeftX = handLeftX - shoulderLeftX;
+			var relativeHandLeftY = handLeftY - shoulderLeftY;
+
+			var relativeHandRightY = handRightY - shoulderRightY;
+			var relativeHandRightX = handRightX - shoulderRightX;
+
+			var relativeElbowLeftX = elbowLeftX - shoulderLeftX;
+			var relativeElbowLeftY = elbowLeftY - shoulderLeftY;
+
+			var relativeElbowRightY = elbowRightY - shoulderRightY;
+			var relativeElbowRightX = elbowRightX - shoulderRightX;
+
+			var relativeHandToSpine = handLeftY - spineBaseY;
+			//console.log(relativeHandToSpine);
+
+			var relativeShoulders = shoulderLeftY - shoulderRightY;
+			//console.log(relativeHandRightY);
+			if (Math.abs(relativeShoulders) < 0.1) {
+				if ((Math.abs(relativeElbowRightY) < 0.1) && (Math.abs(relativeElbowRightX) > 0.1) && (Math.abs(relativeHandRightY) < 0.1) && (Math.abs(relativeHandRightX) > 0.1) && (Math.abs(relativeHandToSpine) < 0.05) && (Math.abs(relativeElbowLeftX) < 0.1) && (Math.abs(relativeHandLeftX) < 0.1) ) {
+					//console.log("T pos detected !!");
+					// draw semi transparent hand cicles
+					ctx.fillStyle = '#0000ff';
+					ctx.fillRect(shoulderRightJointPoint.depthX * 640, shoulderRightJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(shoulderLeftJointPoint.depthX * 640, shoulderLeftJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(elbowRightJointPoint.depthX * 640, elbowRightJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(elbowLeftJointPoint.depthX * 640, elbowLeftJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(handLeftJointPoint.depthX * 640, handLeftJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(handRightJointPoint.depthX * 640, handRightJointPoint.depthY * 360, 10, 10);
+				}
+			}
+		}
+
+		function detectHLpos(handLeftJointPoint, handRightJointPoint, shoulderLeftJointPoint, shoulderRightJointPoint, elbowLeftJointPoint, elbowRightJointPoint, spineBaseJointPoint) {
+			var handLeftX = handLeftJointPoint.depthX;
+			var handLeftY = handLeftJointPoint.depthY;
+
+			var handRightY = handRightJointPoint.depthY;
+			var handRightX = handRightJointPoint.depthX;
+
+			var shoulderRightY = shoulderRightJointPoint.depthY;
+			var shoulderRightX = shoulderRightJointPoint.depthX;
+
+			var shoulderLeftY = shoulderLeftJointPoint.depthY;
+			var shoulderLeftX = shoulderLeftJointPoint.depthX;
+
+			var elbowLeftX = elbowLeftJointPoint.depthX;
+			var elbowLeftY = elbowLeftJointPoint.depthY;
+
+			var elbowRightY = elbowRightJointPoint.depthY;
+			var elbowRightX = elbowRightJointPoint.depthX;
+
+			var spineBaseX = spineBaseJointPoint.depthX;
+			var spineBaseY = spineBaseJointPoint.depthY;
+
+			var relativeHandLeftX = handLeftX - shoulderLeftX;
+			var relativeHandLeftY = handLeftY - shoulderLeftY;
+
+			var relativeHandRightY = handRightY - shoulderRightY;
+			var relativeHandRightX = handRightX - shoulderRightX;
+
+			var relativeElbowLeftX = elbowLeftX - shoulderLeftX;
+			var relativeElbowLeftY = elbowLeftY - shoulderLeftY;
+
+			var relativeElbowRightY = elbowRightY - shoulderRightY;
+			var relativeElbowRightX = elbowRightX - shoulderRightX;
+
+			var relativeHandToSpine = handRightY - spineBaseY;
+			//console.log(relativeHandToSpine);
+
+			var relativeShoulders = shoulderLeftY - shoulderRightY;
+			//console.log(relativeHandRightY);
+			if (Math.abs(relativeShoulders) < 0.1) {
+				if ((Math.abs(relativeElbowLeftY) < 0.1) && (Math.abs(relativeElbowLeftX) > 0.1) && (Math.abs(relativeHandLeftY) < 0.1) && (Math.abs(relativeHandLeftX) > 0.1) && (Math.abs(relativeHandToSpine) < 0.05) && (Math.abs(relativeElbowRightX) < 0.1) && (Math.abs(relativeHandRightX) < 0.1) ) {
+					//console.log("T pos detected !!");
+					// draw semi transparent hand cicles
+					ctx.fillStyle = '#00ffff';
+					ctx.fillRect(shoulderRightJointPoint.depthX * 640, shoulderRightJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(shoulderLeftJointPoint.depthX * 640, shoulderLeftJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(elbowRightJointPoint.depthX * 640, elbowRightJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(elbowLeftJointPoint.depthX * 640, elbowLeftJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(handLeftJointPoint.depthX * 640, handLeftJointPoint.depthY * 360, 10, 10);
+					ctx.fillRect(handRightJointPoint.depthX * 640, handRightJointPoint.depthY * 360, 10, 10);
+				}
+			}
+		}
+
+		function drawHand(jointPoint, handColor) {
+			// draw semi transparent hand cicles
+			ctx2.globalAlpha = 0.75;
+			ctx2.beginPath();
+			ctx2.fillStyle = handColor;
+			ctx2.arc(jointPoint.depthX * 640, jointPoint.depthY * 360, HANDSIZE, 0, Math.PI * 2, true);
+			ctx2.fill();
+			ctx2.closePath();
+			ctx2.globalAlpha = 1;
+		}
+		socket.on('bodyFrame', function(bodyFrame){
+			ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+			var index = 0;
+			bodyFrame.bodies.forEach(function(body){
+				if(body.tracked) {
+					for(var jointType in body.joints) {
+						var joint = body.joints[jointType];
+						ctx.fillStyle = colors[index];
+						ctx.fillRect(joint.depthX * 640, joint.depthY * 360, 10, 10);
+					}
+					//draw hand states
+					//updateHandState(body.leftHandState, body.joints[7]);
+					//updateHandState(body.rightHandState, body.joints[11]);
+					detectTpos(body.joints[7],body.joints[11],body.joints[4],body.joints[8],body.joints[5],body.joints[9]);
+					detectHRpos(body.joints[7],body.joints[11],body.joints[4],body.joints[8],body.joints[5],body.joints[9],body.joints[0]);
+					detectHLpos(body.joints[7],body.joints[11],body.joints[4],body.joints[8],body.joints[5],body.joints[9],body.joints[0]);
+					index++;
+				}
+			});
+		});
+
+		/*socket.on('depthFrame', function(imageBuffer){
+			if(!imageProcessing) {
+				imageProcessing = true;
+				imageWorkerThread.postMessage({ "message": "processImageData", "imageBuffer": imageBuffer });
+			}
+		});*/
+	</script>
+</body>
+</html>
