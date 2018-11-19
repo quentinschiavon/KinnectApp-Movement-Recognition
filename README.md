@@ -1,6 +1,6 @@
 KinnectApp-Movement-Recognition
 
-Kinnect 2 movement recognition with Kennect2 library
+Kinnect 2 movement recognition using Kinnect2 library
 
 clone this repository
 at root of project run "npm install"
