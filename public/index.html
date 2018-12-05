@@ -5,17 +5,33 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<title>Node Kinect2 Client</title>
 	<link rel="stylesheet" href="">
+
+    <script src="/scripts/jquery/dist/jquery.min.js"></script>
 </head>
 <body>
-	<canvas id="canvas" width="640" height="360"></canvas>
-	<canvas id="canvas2" width="640" height="360"></canvas>
+    <button id=button style="background-color: red; color: white; font-size: 30px">Emergency Stop</button>
+    <div>
+	   <canvas id="canvas" width="640" height="360"></canvas>
+	   <canvas id="canvas2" width="640" height="360"></canvas>
+    </div>
+    
+
 	<script src="/socket.io/socket.io.js"></script>
 	<script>
+
+        $('button').click(function(){
+            $.get("http://192.168.2.36:8080/deplace", function( data ) {
+              console.log( "Emergency Stop" );
+            });
+        })
+
 		var socket = io.connect('/');
 		var canvas = document.getElementById('canvas');
 		var canvas2 = document.getElementById('canvas2');
 		var ctx = canvas.getContext('2d');
 		var ctx2 = canvas2.getContext('2d');
+
+        var position = 0;
 
 		var colorProcessing = false;
 		var colorWorkerThread = new Worker("js/colorWorker.js");
@@ -131,6 +147,11 @@
                     ctx.fillRect(elbowLeftJointPoint.depthX * 640, elbowLeftJointPoint.depthY * 360, 10, 10);
                     ctx.fillRect(handLeftJointPoint.depthX * 640, handLeftJointPoint.depthY * 360, 10, 10);
                     ctx.fillRect(handRightJointPoint.depthX * 640, handRightJointPoint.depthY * 360, 10, 10);
+
+                    position = 1;
+                    /*$.post("http://192.168.2.36:8080/speech", {"text" : "Pause café"}, function( data ) {
+                      console.log( "Speak" );
+                    });*/
                 }
             }
         }
@@ -184,7 +205,7 @@
             if (Math.abs(relativeShoulders) < 0.1) {
                 if ((Math.abs(relativeElbowRightY) < 0.1) && (Math.abs(relativeElbowRightX) > 0.1) 
                     && (Math.abs(relativeHandRightY) < 0.1) && (Math.abs(relativeHandRightX) > 0.1) 
-                    && (Math.abs(relativeHandToSpine) < 0.05) && (Math.abs(relativeElbowLeftX) < 0.1) 
+                    && (Math.abs(relativeHandToSpine) < 0.1) && (Math.abs(relativeElbowLeftX) < 0.1) 
                     && (Math.abs(relativeHandLeftX) < 0.1) ) {
                     //console.log("T pos detected !!");
                     // draw semi transparent hand cicles
@@ -195,6 +216,11 @@
                     ctx.fillRect(elbowLeftJointPoint.depthX * 640, elbowLeftJointPoint.depthY * 360, 10, 10);
                     ctx.fillRect(handLeftJointPoint.depthX * 640, handLeftJointPoint.depthY * 360, 10, 10);
                     ctx.fillRect(handRightJointPoint.depthX * 640, handRightJointPoint.depthY * 360, 10, 10);
+
+                    position = 2;
+                    /*$.get("http://192.168.2.36:8080/deplace?angular=0.1", function( data ) {
+                      console.log( "Turn Right" );
+                    });*/
                 }
             }
         }
@@ -248,7 +274,7 @@
             if (Math.abs(relativeShoulders) < 0.1) {
                 if ((Math.abs(relativeElbowLeftY) < 0.1) && (Math.abs(relativeElbowLeftX) > 0.1) 
                     && (Math.abs(relativeHandLeftY) < 0.1) && (Math.abs(relativeHandLeftX) > 0.1) 
-                    && (Math.abs(relativeHandToSpine) < 0.05) && (Math.abs(relativeElbowRightX) < 0.1) 
+                    && (Math.abs(relativeHandToSpine) < 0.1) && (Math.abs(relativeElbowRightX) < 0.1) 
                     && (Math.abs(relativeHandRightX) < 0.1) ) {
                     //console.log("T pos detected !!");
                     // draw semi transparent hand cicles
@@ -259,6 +285,11 @@
                     ctx.fillRect(elbowLeftJointPoint.depthX * 640, elbowLeftJointPoint.depthY * 360, 10, 10);
                     ctx.fillRect(handLeftJointPoint.depthX * 640, handLeftJointPoint.depthY * 360, 10, 10);
                     ctx.fillRect(handRightJointPoint.depthX * 640, handRightJointPoint.depthY * 360, 10, 10);
+
+                    position = 3;
+                    /*$.get("http://192.168.2.36:8080/deplace?angular=-0.1", function( data ) {
+                      console.log( "Turn Left" );
+                    });*/
                 }
             }
         }
@@ -285,6 +316,12 @@
                 ctx.fillStyle = '#ffff00';
                 ctx.fillRect(handLeftJointPoint.depthX * 640, handLeftJointPoint.depthY * 360, 10, 10);
                 ctx.fillRect(handRightJointPoint.depthX * 640, handRightJointPoint.depthY * 360, 10, 10);
+
+                position = 4;
+
+                /*$.get("http://192.168.2.36:8080/deplace", function( data ) {
+                    console.log( "Emergency Stop" );
+                });*/
             }
         }
 
@@ -341,6 +378,12 @@
                     ctx.fillRect(elbowLeftJointPoint.depthX * 640, elbowLeftJointPoint.depthY * 360, 10, 10);
                     ctx.fillRect(handLeftJointPoint.depthX * 640, handLeftJointPoint.depthY * 360, 10, 10);
                     ctx.fillRect(handRightJointPoint.depthX * 640, handRightJointPoint.depthY * 360, 10, 10);
+
+                    position = 5;
+
+                    /*$.get("http://192.168.2.36:8080/deplace?linear=0.1", function( data ) {
+                      console.log( "Forward" );
+                    });*/
                 }
             }
         }
@@ -407,6 +450,12 @@
                     ctx.fillRect(elbowLeftJointPoint.depthX * 640, elbowLeftJointPoint.depthY * 360, 10, 10);
                     ctx.fillRect(handLeftJointPoint.depthX * 640, handLeftJointPoint.depthY * 360, 10, 10);
                     ctx.fillRect(handRightJointPoint.depthX * 640, handRightJointPoint.depthY * 360, 10, 10);
+
+                    position = 6;
+
+                    /*$.get("http://192.168.2.36:8080/deplace?linear=-0.1", function( data ) {
+                      console.log( "TBackward" );
+                    });*/
                 }
             }
         }
@@ -422,7 +471,11 @@
 			ctx2.closePath();
 			ctx2.globalAlpha = 1;
 		}
-		socket.on('bodyFrame', function(bodyFrame){
+
+
+        socket.on('bodyFrame', function(bodyFrame){
+
+
 			ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
 			var index = 0;
 			bodyFrame.bodies.forEach(function(body){
@@ -435,6 +488,7 @@
 					//draw hand states
 					//updateHandState(body.leftHandState, body.joints[7]);
 					//updateHandState(body.rightHandState, body.joints[11]);
+                    position = 0;
 					detectTpos(body.joints[7],body.joints[11],body.joints[4],body.joints[8],body.joints[5],body.joints[9]);
 					detectHRpos(body.joints[7],body.joints[11],body.joints[4],body.joints[8],body.joints[5],body.joints[9],body.joints[0]);
 					detectHLpos(body.joints[7],body.joints[11],body.joints[4],body.joints[8],body.joints[5],body.joints[9],body.joints[0]);
@@ -442,16 +496,66 @@
                     detectUpFistLeft(body.joints[7],body.joints[11],body.joints[4],body.joints[8],body.joints[5],body.joints[9],body.joints[3]);
                     detectEmergencyPos(body.joints[7],body.joints[11]);
 					index++;
+
+                    
 				}
 			});
 		});
 
-		/*socket.on('depthFrame', function(imageBuffer){
-			if(!imageProcessing) {
-				imageProcessing = true;
-				imageWorkerThread.postMessage({ "message": "processImageData", "imageBuffer": imageBuffer });
-			}
-		});*/
+        function sendPos() {
+
+            let server_adress = "http://192.168.2.36:8080";
+            let linear_speed = "0.1";
+            let angular_speed = "0.25";
+            let text = "Pause café";
+
+            switch(position) {
+                case 0 :
+                    $.get(server_adress + "/deplace", function( data ) {
+                      console.log( "Stop" );
+                    });
+                    break;
+                case 1 :
+                    $.post(server_adress + "/speech", {"text" : text}, function( data ) {
+                      console.log( "Speak" );
+                    });
+                    break;
+                case 2 :
+                    $.get(server_adress + "/deplace?angular=-" + angular_speed, function( data ) {
+                      console.log( "Turn Right" );
+                    });
+                    break;
+                case 3 :
+                    $.get(server_adress + "/deplace?angular=" + angular_speed, function( data ) {
+                      console.log( "Turn Left" );
+                    });
+                    break;
+                case 4 :
+                    $.get(server_adress + "/deplace", function( data ) {
+                        console.log( "Emergency Stop" );
+                    });
+                    break;
+                case 5 :
+                    $.get(server_adress + "/deplace?linear=" + linear_speed, function( data ) {
+                      console.log( "Forward" );
+                    });
+                    break;
+                case 6 :
+                    $.get(server_adress + "/deplace?linear=-" + linear_speed, function( data ) {
+                      console.log( "Backward" );
+                    });
+                    break;
+                default :
+                    position = 0;
+            }
+        }
+
+        setInterval(sendPos, 1000);
+        /*$.get("http://192.168.2.36:8080/deplace?angular=0.1", function( data ) {
+          console.log( "Get send" );
+        });*/
+        
+		
 	</script>
 </body>
 </html>

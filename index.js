@@ -5,6 +5,8 @@ var Kinect2 = require('kinect2'), //change to 'kinect2' in a project of your own
 	io = require('socket.io').listen(server),
 	zlib = require('zlib');
 
+app.use('/scripts', express.static(__dirname + '/node_modules/'));
+
 var kinect = new Kinect2();
 
 if(kinect.open()) {
